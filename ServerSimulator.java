@@ -9,8 +9,8 @@ public class ServerSimulator {
     public static void main(String args[]) {
         try {
             Registry registry = LocateRegistry.getRegistry();
-            Servant servant = new Servant();
-            ProxyServerInterface proxyServerInterface = (ProxyServerInterface) UnicastRemoteObject.exportObject(servant, 9);
+            ProxyServer proxyServer = new ProxyServer();
+            ProxyServerInterface proxyServerInterface = (ProxyServerInterface) UnicastRemoteObject.exportObject(proxyServer, 9);
             registry.bind("proxy", proxyServerInterface);
 
             for (int cnt = 1; cnt <= 5; cnt++) {

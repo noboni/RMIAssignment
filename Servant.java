@@ -64,7 +64,7 @@ public class Servant implements ServiceInterface {
     public Integer getNumberOfCities(String countryCode, Long minAmountOfPopulation) {
         List<GeoNameInformation> geoNameInformation = getAllGeoNameInformation();
         return (int) geoNameInformation.stream().filter(it -> it.getCountryCode().equals(countryCode))
-                .filter(it -> it.getPopulation() >= 10000)
+                .filter(it -> it.getPopulation() >= minAmountOfPopulation)
                 .count();
     }
 
