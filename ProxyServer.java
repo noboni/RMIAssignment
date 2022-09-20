@@ -22,9 +22,12 @@ public class ProxyServer implements ProxyServerInterface {
     private Integer calZone(int zone, boolean isFirst) {
         Integer finalZone;
         if (isFirst) {
-            finalZone = (zone + 1) % 5;
+            finalZone = zone + 1;
         } else {
-            finalZone = (zone + 4) % 4;
+            finalZone = zone + 4;
+        }
+        if (finalZone > 5) {
+            finalZone = finalZone % 5;
         }
         return finalZone;
     }
