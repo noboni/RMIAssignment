@@ -7,10 +7,10 @@ public class ServerStub {
         try{
             Registry registry = LocateRegistry.getRegistry();
             Registry registry2 = LocateRegistry.getRegistry();
-            Server server =new Server();
-            ServerInterface serverStub = (ServerInterface) UnicastRemoteObject.exportObject(server,0) ;
-            Server server2 =new Server();
-            ServerInterface serverStub2 = (ServerInterface) UnicastRemoteObject.exportObject(server2,1) ;
+            Servant server =new Servant();
+            ServiceInterface serverStub = (ServiceInterface) UnicastRemoteObject.exportObject(server,0) ;
+            Servant server2 =new Servant();
+            ServiceInterface serverStub2 = (ServiceInterface) UnicastRemoteObject.exportObject(server2,1) ;
 //            ServerInterface serverStub3 = (ServerInterface) UnicastRemoteObject.exportObject(server,2) ;
 //            ServerInterface serverStub4 = (ServerInterface) UnicastRemoteObject.exportObject(server,3) ;
 //            ServerInterface serverStub5 = (ServerInterface) UnicastRemoteObject.exportObject(server,5) ;
