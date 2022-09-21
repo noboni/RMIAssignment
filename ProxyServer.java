@@ -8,12 +8,12 @@ public class ProxyServer implements ProxyServerInterface {
         } else {
             Integer tempZone = calZone(zone, true);
             server = ServerSimulator.getServerById(tempZone);
-            if (server.getQueueSize() <= 20) {
+            if (server.getQueueSize() > 20) {
                 return tempZone;
             }
             tempZone = calZone(zone, false);
             server = ServerSimulator.getServerById(tempZone);
-            if (server.getQueueSize() <= 20) {
+            if (server.getQueueSize() > 20) {
                 return tempZone;
             }
 
@@ -31,6 +31,7 @@ public class ProxyServer implements ProxyServerInterface {
         if (finalZone > 5) {
             finalZone = finalZone % 5;
         }
+        System.out.println("\n\n\nZone:"+finalZone);
         return finalZone;
     }
 }

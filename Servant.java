@@ -2,7 +2,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.rmi.AlreadyBoundException;
 import java.rmi.MarshalledObject;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
@@ -15,7 +14,7 @@ public class Servant implements ServiceInterface {
     private String name;
     public Queue<Request> requests = new LinkedList<>();
 
-    public Servant(Integer serverId) throws RemoteException, AlreadyBoundException {
+    public Servant(Integer serverId) throws RemoteException {
         System.out.println("Server " + serverId + "is running.");
         this.name = "server" + serverId;
     }
@@ -29,7 +28,7 @@ public class Servant implements ServiceInterface {
     }
 
     @Override
-    public int getQueueSize() {
+    public synchronized int getQueueSize() {
         return requests.size();
     }
 
@@ -109,31 +108,37 @@ public class Servant implements ServiceInterface {
     }
 
     @Override
-    public void storeRequestInQueue(MarshalledObject<Request> request) throws RemoteException {
+    public synchronized void storeRequestInQueue(MarshalledObject<Request> marshalledRequest) throws RemoteException {
         try {
-            this.requests.add(request.get());
-        } catch (IOException | ClassNotFoundException e) {
-            throw new IllegalArgumentException("Some exception occured");
-        }
-
-    }
-
-    @Override
-    public void executeFunction() {
-        while (requests.size() > 0) {
-            Request request = requests.poll();
-            Response response = executeFunction(request);
-            System.out.println("Resonse-----------" + response.getResult());
-        }
-    }
-
-    private Response executeFunction(Request request) {
-        try {
+            Request request = marshalledRequest.get();
+            request.setTurnAroundStartTime(System.currentTimeMillis());
             if (request.getZone() == request.getServerId()) {
                 Thread.sleep(80);
             } else {
                 Thread.sleep(170);
             }
+            request.setWaitingStartTime(System.currentTimeMillis());
+            this.requests.add(request);
+        } catch (IOException | ClassNotFoundException | InterruptedException e) {
+            throw new IllegalArgumentException("Some exception occured");
+        }
+    }
+
+    @Override
+    public void executeFunction() throws RemoteException {
+        while (requests.size() > 0) {
+            Request request = requests.poll();
+            Response response = executeFunction(request);
+            System.out.println("Resonse-----------" + response.getResult());
+            request.getListener().workCompleted(request, response);
+        }
+    }
+
+    private Response executeFunction(Request request) {
+        try {
+            Response response = new Response();
+            response.setWaitingTime(System.currentTimeMillis() - request.getWaitingStartTime());
+            request.setExecutionStartTime(System.currentTimeMillis());
             Integer result = null;
             if (request.getMethodName().equals("getPopulationofCountry")) {
                 if (request.getParameters().size() < 1) {
@@ -164,14 +169,14 @@ public class Servant implements ServiceInterface {
             } else {
                 throw new IllegalArgumentException("Invalid number of parameters");
             }
-
-            Response response = new Response();
             response.setResult(result);
             response.setMethodName(request.getMethodName());
             response.setServerId("" + request.getServerId());
             response.setParameters(request.getParameters());
+            response.setExecutionTime(System.currentTimeMillis() - request.getExecutionStartTime());
             return response;
         } catch (Exception e) {
+            e.printStackTrace();
             throw new IllegalArgumentException("Some exception occured");
         }
     }

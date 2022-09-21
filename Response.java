@@ -4,9 +4,9 @@ public class Response implements Serializable {
     private int result;
     private String methodName;
     private List<String> parameters;
-    private String turnAroundTime;
-    private String executionTime;
-    private String waitingTime;
+    private Long turnAroundTime;
+    private Long executionTime;
+    private Long waitingTime;
     private String serverId;
 
     public long getResult() {
@@ -33,27 +33,27 @@ public class Response implements Serializable {
         this.parameters = parameters;
     }
 
-    public String getTurnAroundTime() {
+    public Long getTurnAroundTime() {
         return turnAroundTime;
     }
 
-    public void setTurnAroundTime(String turnAroundTime) {
+    public void setTurnAroundTime(Long turnAroundTime) {
         this.turnAroundTime = turnAroundTime;
     }
 
-    public String getExecutionTime() {
+    public Long getExecutionTime() {
         return executionTime;
     }
 
-    public void setExecutionTime(String executionTime) {
+    public void setExecutionTime(Long executionTime) {
         this.executionTime = executionTime;
     }
 
-    public String getWaitingTime() {
+    public Long getWaitingTime() {
         return waitingTime;
     }
 
-    public void setWaitingTime(String waitingTime) {
+    public void setWaitingTime(Long waitingTime) {
         this.waitingTime = waitingTime;
     }
 
