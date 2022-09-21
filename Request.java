@@ -1,9 +1,14 @@
+import java.io.Serializable;
 import java.util.List;
 
-public class Request {
+public class Request implements Serializable {
     private String methodName;
     private List<String> parameters;
-    private Long zone;
+    private int zone;
+    private int serverId;
+
+    public Request() {
+    }
 
     public String getMethodName() {
         return methodName;
@@ -21,11 +26,19 @@ public class Request {
         this.parameters = parameters;
     }
 
-    public Long getZone() {
+    public int getZone() {
         return zone;
     }
 
-    public void setZone(Long zone) {
+    public void setZone(Integer zone) {
         this.zone = zone;
+    }
+
+    public int getServerId() {
+        return serverId;
+    }
+
+    public void setServerId(Integer serverId) {
+        this.serverId = serverId;
     }
 }

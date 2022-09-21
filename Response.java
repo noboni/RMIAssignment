@@ -1,6 +1,7 @@
+import java.io.Serializable;
 import java.util.List;
-public class Response {
-    private Long result;
+public class Response implements Serializable {
+    private int result;
     private String methodName;
     private List<String> parameters;
     private String turnAroundTime;
@@ -12,7 +13,7 @@ public class Response {
         return result;
     }
 
-    public void setResult(long result) {
+    public void setResult(int result) {
         this.result = result;
     }
 
