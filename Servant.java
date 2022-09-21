@@ -18,8 +18,6 @@ public class Servant implements ServiceInterface {
     public Servant(Integer serverId) throws RemoteException, AlreadyBoundException {
         System.out.println("Server " + serverId + "is running.");
         this.name = "server" + serverId;
-//        ExecuteRequests executeRequests = new ExecuteRequests();
-
     }
 
     public String getName() {
@@ -30,25 +28,12 @@ public class Servant implements ServiceInterface {
         this.name = name;
     }
 
-//    public class ExecuteRequests implements Runnable {
-//        public void run() {
-//            while (true) {
-//                if (requests.size() > 0) {
-//                    Request request = requests.poll();
-//                    Response response = executeFunction(request);
-//                    System.out.println("Result------:" + response.getResult());
-//                }
-//            }
-//        }
-//    }
-
     @Override
     public int getQueueSize() {
         return requests.size();
     }
 
-    @Override
-    public List<GeoNameInformation> getAllGeoNameInformation() {
+    private List<GeoNameInformation> getAllGeoNameInformation() {
         List<GeoNameInformation> result = new ArrayList<GeoNameInformation>();
         String fileName = "2022-09-07-dataset.csv";
         try {
@@ -93,32 +78,29 @@ public class Servant implements ServiceInterface {
         }
     }
 
-    @Override
-    public Integer getPopulationOfCountry(String countryCode) {
+    private Integer getPopulationOfCountry(String countryCode) {
         List<GeoNameInformation> geoNameInformation = getAllGeoNameInformation();
         return (int) geoNameInformation.stream().filter(it -> it.getCountryCode().equals(countryCode))
                 .map(GeoNameInformation::getPopulation)
                 .mapToLong(Long::longValue).sum();
     }
 
-    @Override
-    public Integer getNumberOfCities(String countryCode, Long minAmountOfPopulation) {
+    private Integer getNumberOfCities(String countryCode, Long minAmountOfPopulation) {
         List<GeoNameInformation> geoNameInformation = getAllGeoNameInformation();
         return (int) geoNameInformation.stream().filter(it -> it.getCountryCode().equals(countryCode))
                 .filter(it -> it.getPopulation() >= minAmountOfPopulation)
                 .count();
     }
 
-    @Override
-    public Integer getNumberOfCountries(Long cityCount, Long minPopulation) {
+    private Integer getNumberOfCountries(Long cityCount, Long minPopulation) {
         List<GeoNameInformation> geoNameInformations = getAllGeoNameInformation();
         return (int) geoNameInformations.stream().filter(it -> it.getPopulation() >= minPopulation)
                 .collect(Collectors.groupingBy(GeoNameInformation::getCountryName, Collectors.counting()))
                 .values().stream().filter(it -> it >= cityCount).count();
     }
 
-    @Override
-    public Integer getNumberOfCountries(Long cityCount, Long minPopulation, Long maxPopulation) {
+
+    private Integer getNumberOfCountries(Long cityCount, Long minPopulation, Long maxPopulation) {
         List<GeoNameInformation> geoNameInformations = getAllGeoNameInformation();
         return (int) geoNameInformations.stream()
                 .filter(it -> it.getPopulation() >= minPopulation && it.getPopulation() <= maxPopulation)
@@ -145,8 +127,7 @@ public class Servant implements ServiceInterface {
         }
     }
 
-    @Override
-    public Response executeFunction(Request request) {
+    private Response executeFunction(Request request) {
         try {
             if (request.getZone() == request.getServerId()) {
                 Thread.sleep(80);
