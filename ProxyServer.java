@@ -3,19 +3,18 @@ import java.rmi.RemoteException;
 public class ProxyServer implements ProxyServerInterface {
     public Integer getServerId(Integer zone) throws RemoteException {
         ServiceInterface server = ServerSimulator.getServerById(zone);
-        System.out.println("\n\n\nQueue Size:" + server.getQueueSize());
         int queueSize = server.getQueueSize();
         if (queueSize <= 20) {
             return zone;
         } else {
             Integer tempZone = calZone(zone, true);
             server = ServerSimulator.getServerById(tempZone);
-            if (queueSize > 20) {
+            if (server.getQueueSize() > 20) {
                 return tempZone;
             }
             tempZone = calZone(zone, false);
             server = ServerSimulator.getServerById(tempZone);
-            if (queueSize > 20) {
+            if (server.getQueueSize() > 20) {
                 return tempZone;
             }
 
