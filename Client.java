@@ -13,29 +13,40 @@ public class Client extends java.rmi.server.UnicastRemoteObject implements Liste
     volatile static LinkedHashMap<String, Response> clientCache = new LinkedHashMap<>();
 
     public static void main(String args[]) throws RemoteException {
-        new Client();
+        boolean isCacheEnabled;
+        //check if the client cache is enabled or not
+        isCacheEnabled = args.length != 0 && !args[0].equalsIgnoreCase("false");
+        new Client(isCacheEnabled);
     }
 
-    public Client() throws RemoteException {
+    public Client(boolean isCacheEnabled) throws RemoteException {
         try {
+            System.out.println("Starting client server");
             Registry registry = LocateRegistry.getRegistry();
+            //Get the proxy server
             ProxyServerInterface proxyServerInterface = (ProxyServerInterface) registry.lookup("proxy");
             List<Request> requests = new ArrayList<>(getAllMethodInformation());
             for (Request request : requests) {
+                request.setCacheEnabledInClient(isCacheEnabled);
+                //if  the cache is enable and data is in the cache send to the writer to write in the file
+                //else if the cache is enabled and the data is not in the cache call the server and execute and then put it in the client cache
+                //else the server and execute
+                //And finally write in the desired file
+                if (isCacheEnabled) {
+                    String requestString = getRequestString(request);
+                    Response response = clientCache.get(requestString);
+                    System.out.println("Size of client Cache:" + clientCache.size());
+                    if (response != null) {
+                        System.out.println("Found in client cache");
+                        workCompleted(request, response, true, false);
+                        continue;
+                    }
+                }
                 Integer serverId = proxyServerInterface.getServerId(request.getZone());
                 String serverName = "server" + serverId;
                 request.setServerId(serverId);
                 request.setListener(this);
-                String requestString = getRequestString(request);
-                System.out.println("RequestString:" + requestString);
-                Response response = clientCache.get(requestString);
-                System.out.println("Size of client Cache:"+ clientCache.size());
-                if (response != null) {
-                    System.out.println("Found in client cache");
-                    workCompleted(request, response, true, false);
-                    continue;
-                }
-                System.out.println("Requesting to server:"+serverId);
+                System.out.println("Requesting to server:" + serverId);
                 ServiceInterface serverStub = (ServiceInterface) registry.lookup(serverName);
                 MarshalledObject<Request> marshalledRequest = new MarshalledObject<>(request);
                 serverStub.storeRequestInQueue(marshalledRequest);
@@ -47,6 +58,7 @@ public class Client extends java.rmi.server.UnicastRemoteObject implements Liste
 
     /**
      * Parsing data from input file and storing in the request objects
+     *
      * @return
      */
     public static List<Request> getAllMethodInformation() {
@@ -81,7 +93,7 @@ public class Client extends java.rmi.server.UnicastRemoteObject implements Liste
                     }
                     line = br.readLine();
                 }
-                System.out.println("Total requests---------------" + result.size());
+                System.out.println("Total number of client requests---------------" + result.size());
                 return result;
             } finally {
                 br.close();
@@ -92,28 +104,41 @@ public class Client extends java.rmi.server.UnicastRemoteObject implements Liste
         return null;
     }
 
+    /**
+     * This is a client side listener which is called from the server side after a request execution is completed
+     * We check whether it comes from a cache or not and write it in the corresponding file accordingly
+     *
+     * @param request
+     * @param response
+     * @param isFromClientCache
+     * @param isFromServerCache
+     * @throws RemoteException
+     */
     @Override
     public synchronized void workCompleted(Request request,
                                            Response response,
                                            boolean isFromClientCache,
                                            boolean isFromServerCache) throws RemoteException {
+        System.out.println("Received response from server:" + response.getServerId());
         if (isFromClientCache) {
             writeInFile(response, "client_cache.txt");
         } else if (isFromServerCache) {
             response.setTurnAroundTime(System.currentTimeMillis() - request.getTurnAroundStartTime());
             writeInFile(response, "server_cache.txt");
-        }
-        if (!isFromClientCache && !isFromServerCache) {
+        } else {
             response.setTurnAroundTime(System.currentTimeMillis() - request.getTurnAroundStartTime());
-            if (clientCache.size() > 50) {
-                Map.Entry<String, Response> entry = clientCache.entrySet().iterator().next();
-                clientCache.remove(entry.getKey());
+            if (request.isCacheEnabledInClient()) {
+                if (clientCache.size() > 50) {
+                    Map.Entry<String, Response> entry = clientCache.entrySet().iterator().next();
+                    clientCache.remove(entry.getKey());
+                }
+
+                String requestString = getRequestString(request);
+                clientCache.put(requestString, response);
             }
-            String requestString = getRequestString(request);
-            clientCache.put(requestString, response);
+            writeInFile(response, "naive_server.txt");
         }
-        // In order to append text to a file, you need to open // file into append mode, you do it by using // FileReader and passing append = true
-        writeInFile(response, "naive_server.txt");
+
     }
 
     private void writeInFile(Response response, String fileName) {
@@ -121,6 +146,7 @@ public class Client extends java.rmi.server.UnicastRemoteObject implements Liste
         BufferedWriter bw = null;
         PrintWriter pw = null;
         try {
+            // In order to append text to a file, you need to open // file into append mode, you do it by using // FileReader and passing append = true
             fw = new FileWriter(fileName, true);
             bw = new BufferedWriter(fw);
             pw = new PrintWriter(bw);

@@ -24,6 +24,13 @@ public class ProxyServer implements ProxyServerInterface {
         return zone;
     }
 
+    /**
+     * Calculate the client zone in which the
+     * @param zone
+     * @param isFirst
+     * @return
+     */
+
     private Integer calZone(int zone, boolean isFirst) {
         //Determine neighbour zone
         Integer finalZone;
@@ -35,7 +42,7 @@ public class ProxyServer implements ProxyServerInterface {
         if (finalZone > 5) {
             finalZone = finalZone % 5;
         }
-        System.out.println("\n\n\nZone:" + finalZone);
+        System.out.println("Zone:" + finalZone);
         return finalZone;
     }
 }

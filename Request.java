@@ -7,6 +7,7 @@ public class Request extends BaseRequest implements Serializable {
     private Long turnAroundStartTime;
     private Long waitingStartTime;
     private Long executionStartTime;
+    private boolean isCacheEnabledInClient;
 
     public Request() {
     }
@@ -49,5 +50,13 @@ public class Request extends BaseRequest implements Serializable {
 
     public void setExecutionStartTime(Long executionStartTime) {
         this.executionStartTime = executionStartTime;
+    }
+
+    public boolean isCacheEnabledInClient() {
+        return isCacheEnabledInClient;
+    }
+
+    public void setCacheEnabledInClient(boolean cacheEnabledInClient) {
+        isCacheEnabledInClient = cacheEnabledInClient;
     }
 }

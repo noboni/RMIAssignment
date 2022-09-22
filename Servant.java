@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 public class Servant implements ServiceInterface {
     private String name;
     public Queue<Request> requests = new LinkedList<>();
-    static volatile LinkedHashMap<BaseRequest, Response> serverCache = new LinkedHashMap<>();
+    static volatile LinkedHashMap<String, Response> serverCache = new LinkedHashMap<>();
 
     public Servant(Integer serverId) throws RemoteException {
         System.out.println("Server " + serverId + "is running.");
@@ -30,6 +30,10 @@ public class Servant implements ServiceInterface {
         return requests.size();
     }
 
+    /**
+     * Processing the whole dataset and putting them in a list of GeoNameInformation
+     * @return
+     */
     private List<GeoNameInformation> getAllGeoNameInformation() {
         List<GeoNameInformation> result = new ArrayList<GeoNameInformation>();
         String fileName = "2022-09-07-dataset.csv";
@@ -65,7 +69,7 @@ public class Servant implements ServiceInterface {
                         System.out.println("Invalid line: " + line);
                     }
                 }
-                System.out.println("Total size---------------" + result.size());
+                System.out.println("Total size of the dataset---------------" + result.size());
                 return result;
             } finally {
                 br.close();
@@ -75,29 +79,43 @@ public class Servant implements ServiceInterface {
         }
     }
 
+    /**
+     * given a country code as input, return the population of the country by
+     * summing up the population of cities in that country
+     * @param countryCode
+     * @return
+     */
     private Integer getPopulationOfCountry(String countryCode) {
-        //given a country code as input, return the population of the country by
-        //summing up the population of cities in that country
         List<GeoNameInformation> geoNameInformation = getAllGeoNameInformation();
         return (int) geoNameInformation.stream().filter(it -> it.getCountryCode().equals(countryCode))
                 .map(GeoNameInformation::getPopulation)
                 .mapToLong(Long::longValue).sum();
     }
 
+    /**
+     * given a country code and min as input, return the total number of cities
+     * in the given country that contains atleast the min amount of
+     * population
+     * @param countryCode
+     * @param minAmountOfPopulation
+     * @return
+     */
     private Integer getNumberOfCities(String countryCode, Long minAmountOfPopulation) {
-        //given a country code and min as input, return the total number of cities
-        //in the given country that contains atleast the "min” amount of
-        //population
         List<GeoNameInformation> geoNameInformation = getAllGeoNameInformation();
         return (int) geoNameInformation.stream().filter(it -> it.getCountryCode().equals(countryCode))
                 .filter(it -> it.getPopulation() >= minAmountOfPopulation)
                 .count();
     }
 
+    /**
+     * Return the number of countries that contain atleast ‘citycount’ number
+     * of cities where each city has the population of atleast ‘minpopulation’
+     * number of people.
+     * @param cityCount
+     * @param minPopulation
+     * @return
+     */
     private Integer getNumberOfCountries(Long cityCount, Long minPopulation) {
-        //Return the number of countries that contain atleast ‘citycount’ number
-        //of cities where each city has the population of atleast ‘minpopulation’
-        //number of people.
         List<GeoNameInformation> geoNameInformations = getAllGeoNameInformation();
         return (int) geoNameInformations.stream().filter(it -> it.getPopulation() >= minPopulation)
                 .collect(Collectors.groupingBy(GeoNameInformation::getCountryName, Collectors.counting()))
@@ -105,10 +123,16 @@ public class Servant implements ServiceInterface {
     }
 
 
+    /**
+     *  Return the number of countries that contain atleast ‘citycount’ number
+     *  of cities where each city has population between ‘minpopulation’ and
+     *  ‘maxpopulation’
+     * @param cityCount
+     * @param minPopulation
+     * @param maxPopulation
+     * @return
+     */
     private Integer getNumberOfCountries(Long cityCount, Long minPopulation, Long maxPopulation) {
-        //Return the number of countries that contain atleast ‘citycount’ number
-        //of cities where each city has population between ‘minpopulation’ and
-        //‘maxpopulation’
         List<GeoNameInformation> geoNameInformations = getAllGeoNameInformation();
         return (int) geoNameInformations.stream()
                 .filter(it -> it.getPopulation() >= minPopulation && it.getPopulation() <= maxPopulation)
@@ -116,6 +140,11 @@ public class Servant implements ServiceInterface {
                 .values().stream().filter(it -> it >= cityCount).count();
     }
 
+    /**
+     * Store the requests in the queue for proccessing
+     * @param marshalledRequest
+     * @throws RemoteException
+     */
     @Override
     public synchronized void storeRequestInQueue(MarshalledObject<Request> marshalledRequest) throws RemoteException {
         try {
@@ -136,26 +165,47 @@ public class Servant implements ServiceInterface {
         }
     }
 
+
+    /**
+     * Call from the processing thread to check the queue size and execute.
+     * Return from the cache if cache is already enabled and data is in the cache
+     * @param isCacheEnabled
+     * @throws RemoteException
+     */
     @Override
-    public void executeFunction() throws RemoteException {
+    public void executeFunction(boolean isCacheEnabled) throws RemoteException {
         while (requests.size() > 0) {
             Request request = requests.poll();
-            Response response = serverCache.get(request);
-            boolean isFromServerCache = true;
-            if (response == null) {
-                isFromServerCache = false;
-                if (serverCache.size() > 200) {
-                    Map.Entry<BaseRequest, Response> entry = serverCache.entrySet().iterator().next();
-                    serverCache.remove(entry.getKey());
+            boolean isFromServerCache = false;
+            Response response = null;
+            //Check if the cache is enabled or not
+            //If the cache is enabled and the data is in the cache send it from the cache to the client listener
+            //Else process the data and send it to the client listener
+            if(isCacheEnabled) {
+                String requestString = getRequestString(request);
+                response = serverCache.get(requestString);
+                isFromServerCache = true;
+                if (response == null) {
+                    isFromServerCache = false;
+                    if (serverCache.size() > 200) {
+                        Map.Entry<String, Response> entry = serverCache.entrySet().iterator().next();
+                        serverCache.remove(entry.getKey());
+                    }
+                    response = executeFunction(request);
+                    serverCache.put(requestString, response);
                 }
+            }else {
                 response = executeFunction(request);
-                serverCache.put(request, response);
-
             }
-            request.getListener().workCompleted(request, response, false, isFromServerCache);
+            request.getListener().workCompleted(request, response, false, isFromServerCache );
         }
     }
 
+    /**
+     * This method calls the necesary functions according to the method names and parameters
+     * @param request
+     * @return
+     */
     private Response executeFunction(Request request) {
         try {
             Response response = new Response();
@@ -202,6 +252,11 @@ public class Servant implements ServiceInterface {
             e.printStackTrace();
             throw new IllegalArgumentException("Some exception occured");
         }
+    }
+
+    private String getRequestString(BaseRequest baseRequest) {
+        String parameters = baseRequest.getParameters().stream().collect(Collectors.joining(" "));
+        return baseRequest.getMethodName() + " " + parameters + " Zone:" + baseRequest.getZone();
     }
 
 }
