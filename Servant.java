@@ -78,6 +78,8 @@ public class Servant implements ServiceInterface {
     }
 
     private Integer getPopulationOfCountry(String countryCode) {
+        //given a country code as input, return the population of the country by
+        //summing up the population of cities in that country
         List<GeoNameInformation> geoNameInformation = getAllGeoNameInformation();
         return (int) geoNameInformation.stream().filter(it -> it.getCountryCode().equals(countryCode))
                 .map(GeoNameInformation::getPopulation)
@@ -85,6 +87,9 @@ public class Servant implements ServiceInterface {
     }
 
     private Integer getNumberOfCities(String countryCode, Long minAmountOfPopulation) {
+        //given a country code and min as input, return the total number of cities
+        //in the given country that contains atleast the "min” amount of
+        //population
         List<GeoNameInformation> geoNameInformation = getAllGeoNameInformation();
         return (int) geoNameInformation.stream().filter(it -> it.getCountryCode().equals(countryCode))
                 .filter(it -> it.getPopulation() >= minAmountOfPopulation)
@@ -92,6 +97,9 @@ public class Servant implements ServiceInterface {
     }
 
     private Integer getNumberOfCountries(Long cityCount, Long minPopulation) {
+        //Return the number of countries that contain atleast ‘citycount’ number
+        //of cities where each city has the population of atleast ‘minpopulation’
+        //number of people.
         List<GeoNameInformation> geoNameInformations = getAllGeoNameInformation();
         return (int) geoNameInformations.stream().filter(it -> it.getPopulation() >= minPopulation)
                 .collect(Collectors.groupingBy(GeoNameInformation::getCountryName, Collectors.counting()))
@@ -100,6 +108,9 @@ public class Servant implements ServiceInterface {
 
 
     private Integer getNumberOfCountries(Long cityCount, Long minPopulation, Long maxPopulation) {
+        //Return the number of countries that contain atleast ‘citycount’ number
+        //of cities where each city has population between ‘minpopulation’ and
+        //‘maxpopulation’
         List<GeoNameInformation> geoNameInformations = getAllGeoNameInformation();
         return (int) geoNameInformations.stream()
                 .filter(it -> it.getPopulation() >= minPopulation && it.getPopulation() <= maxPopulation)
@@ -112,9 +123,12 @@ public class Servant implements ServiceInterface {
         try {
             Request request = marshalledRequest.get();
             request.setTurnAroundStartTime(System.currentTimeMillis());
+            //Check if server in the same zone
             if (request.getZone() == request.getServerId()) {
+                //Simulate the connection time to the server in the same zone
                 Thread.sleep(80);
             } else {
+                //Simulate the connection time to the server in the neighbour zone
                 Thread.sleep(170);
             }
             request.setWaitingStartTime(System.currentTimeMillis());
@@ -140,6 +154,7 @@ public class Servant implements ServiceInterface {
             response.setWaitingTime(System.currentTimeMillis() - request.getWaitingStartTime());
             request.setExecutionStartTime(System.currentTimeMillis());
             Integer result = null;
+            //Intended method call
             if (request.getMethodName().equals("getPopulationofCountry")) {
                 if (request.getParameters().size() < 1) {
                     throw new IllegalArgumentException("Invalid number of parameters");

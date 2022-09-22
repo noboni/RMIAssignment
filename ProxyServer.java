@@ -4,9 +4,11 @@ public class ProxyServer implements ProxyServerInterface {
     public Integer getServerId(Integer zone) throws RemoteException {
         ServiceInterface server = ServerSimulator.getServerById(zone);
         int queueSize = server.getQueueSize();
+        //check if overloaded with client requests
         if (queueSize <= 20) {
             return zone;
         } else {
+            //Find another server in the neighbour zone
             Integer tempZone = calZone(zone, true);
             server = ServerSimulator.getServerById(tempZone);
             if (server.getQueueSize() > 20) {
@@ -23,6 +25,7 @@ public class ProxyServer implements ProxyServerInterface {
     }
 
     private Integer calZone(int zone, boolean isFirst) {
+        //Determine neighbour zone
         Integer finalZone;
         if (isFirst) {
             finalZone = zone + 1;

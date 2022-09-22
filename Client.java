@@ -79,7 +79,9 @@ public class Client extends java.rmi.server.UnicastRemoteObject  implements List
     public synchronized void workCompleted(Request request, Response response) throws RemoteException {
         response.setTurnAroundTime(System.currentTimeMillis() - request.getTurnAroundStartTime());
         System.out.println("Here..................");
-        // In order to append text to a file, you need to open // file into append mode, you do it by using // FileReader and passing append = true
+        // In order to append text to a file, you need to open
+        // file into append mode, you do it by using
+        // FileReader and passing append = true
         FileWriter fw = null;
         BufferedWriter bw = null;
         PrintWriter pw = null;
