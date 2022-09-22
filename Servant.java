@@ -4,15 +4,13 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.rmi.MarshalledObject;
 import java.rmi.RemoteException;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Queue;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class Servant implements ServiceInterface {
     private String name;
     public Queue<Request> requests = new LinkedList<>();
+    static volatile LinkedHashMap<BaseRequest, Response> serverCache = new LinkedHashMap<>();
 
     public Servant(Integer serverId) throws RemoteException {
         System.out.println("Server " + serverId + "is running.");
@@ -128,9 +126,19 @@ public class Servant implements ServiceInterface {
     public void executeFunction() throws RemoteException {
         while (requests.size() > 0) {
             Request request = requests.poll();
-            Response response = executeFunction(request);
-            System.out.println("Resonse-----------" + response.getResult());
-            request.getListener().workCompleted(request, response);
+            Response response = serverCache.get(request);
+            boolean isFromServerCache = true;
+            if (response == null) {
+                isFromServerCache = false;
+                if (serverCache.size() > 200) {
+                    Map.Entry<BaseRequest, Response> entry = serverCache.entrySet().iterator().next();
+                    serverCache.remove(entry.getKey());
+                }
+                response = executeFunction(request);
+                serverCache.put(request, response);
+
+            }
+            request.getListener().workCompleted(request, response, false, isFromServerCache);
         }
     }
 

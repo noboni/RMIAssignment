@@ -4,14 +4,19 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
-public class Client extends java.rmi.server.UnicastRemoteObject  implements Listener{
+public class Client extends java.rmi.server.UnicastRemoteObject implements Listener {
+    volatile static LinkedHashMap<String, Response> clientCache = new LinkedHashMap<>();
+
     public static void main(String args[]) throws RemoteException {
         new Client();
     }
-    public Client() throws RemoteException{
+
+    public Client() throws RemoteException {
         try {
             Registry registry = LocateRegistry.getRegistry();
             ProxyServerInterface proxyServerInterface = (ProxyServerInterface) registry.lookup("proxy");
@@ -21,7 +26,16 @@ public class Client extends java.rmi.server.UnicastRemoteObject  implements List
                 String serverName = "server" + serverId;
                 request.setServerId(serverId);
                 request.setListener(this);
-
+                String requestString = getRequestString(request);
+                System.out.println("RequestString:" + requestString);
+                Response response = clientCache.get(requestString);
+                System.out.println("Size of client Cache:"+ clientCache.size());
+                if (response != null) {
+                    System.out.println("Found in client cache");
+                    workCompleted(request, response, true, false);
+                    continue;
+                }
+                System.out.println("Requesting to server:"+serverId);
                 ServiceInterface serverStub = (ServiceInterface) registry.lookup(serverName);
                 MarshalledObject<Request> marshalledRequest = new MarshalledObject<>(request);
                 serverStub.storeRequestInQueue(marshalledRequest);
@@ -31,10 +45,13 @@ public class Client extends java.rmi.server.UnicastRemoteObject  implements List
         }
     }
 
+    /**
+     * Parsing data from input file and storing in the request objects
+     * @return
+     */
     public static List<Request> getAllMethodInformation() {
         List<Request> result = new ArrayList<Request>();
         String fileName = "2022-09-07-input.txt";
-//        String fileName = "test-input.txt";
         try {
             BufferedReader br = new BufferedReader(new FileReader(new File(fileName)));
             try {
@@ -76,24 +93,44 @@ public class Client extends java.rmi.server.UnicastRemoteObject  implements List
     }
 
     @Override
-    public synchronized void workCompleted(Request request, Response response) throws RemoteException {
-        response.setTurnAroundTime(System.currentTimeMillis() - request.getTurnAroundStartTime());
-        System.out.println("Here..................");
+    public synchronized void workCompleted(Request request,
+                                           Response response,
+                                           boolean isFromClientCache,
+                                           boolean isFromServerCache) throws RemoteException {
+        if (isFromClientCache) {
+            writeInFile(response, "client_cache.txt");
+        } else if (isFromServerCache) {
+            response.setTurnAroundTime(System.currentTimeMillis() - request.getTurnAroundStartTime());
+            writeInFile(response, "server_cache.txt");
+        }
+        if (!isFromClientCache && !isFromServerCache) {
+            response.setTurnAroundTime(System.currentTimeMillis() - request.getTurnAroundStartTime());
+            if (clientCache.size() > 50) {
+                Map.Entry<String, Response> entry = clientCache.entrySet().iterator().next();
+                clientCache.remove(entry.getKey());
+            }
+            String requestString = getRequestString(request);
+            clientCache.put(requestString, response);
+        }
         // In order to append text to a file, you need to open // file into append mode, you do it by using // FileReader and passing append = true
+        writeInFile(response, "naive_server.txt");
+    }
+
+    private void writeInFile(Response response, String fileName) {
         FileWriter fw = null;
         BufferedWriter bw = null;
         PrintWriter pw = null;
         try {
-            fw = new FileWriter("naive_server.txt", true);
+            fw = new FileWriter(fileName, true);
             bw = new BufferedWriter(fw);
             pw = new PrintWriter(bw);
-            String result = response.getResult()+" "+response.getMethodName()+ " "+
+            String result = response.getResult() + " " + response.getMethodName() + " " +
                     response.getParameters().stream().collect(Collectors.joining(" "))
-                    +" (turnaround time: "+response.getTurnAroundTime()+" ms, " +
-                    "execution time: "+response.getExecutionTime()+" ms, " +
-                    "waiting time: "+response.getWaitingTime()+" ms, processed by Server "+response.getServerId()+")" ;
+                    + " (turnaround time: " + response.getTurnAroundTime() + " ms, " +
+                    "execution time: " + response.getExecutionTime() + " ms, " +
+                    "waiting time: " + response.getWaitingTime() + " ms, processed by Server " + response.getServerId() + ")";
             pw.println(result);
-            System.out.println("Data Successfully appended into file");
+            System.out.println("Data Successfully appended into file:" + fileName);
             pw.flush();
         } catch (IOException i) {
             i.printStackTrace();
@@ -106,6 +143,11 @@ public class Client extends java.rmi.server.UnicastRemoteObject  implements List
                 io.printStackTrace();
             }
         }
+    }
+
+    private String getRequestString(BaseRequest baseRequest) {
+        String parameters = baseRequest.getParameters().stream().collect(Collectors.joining(" "));
+        return baseRequest.getMethodName() + " " + parameters + " Zone:" + baseRequest.getZone();
     }
 
 }
