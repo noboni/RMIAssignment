@@ -11,12 +11,12 @@ public class ProxyServer implements ProxyServerInterface {
             //Find another server in the neighbour zone
             Integer tempZone = calZone(zone, true);
             server = ServerSimulator.getServerById(tempZone);
-            if (server.getQueueSize() > 20) {
+            if (server.getQueueSize() < 20) {
                 return tempZone;
             }
             tempZone = calZone(zone, false);
             server = ServerSimulator.getServerById(tempZone);
-            if (server.getQueueSize() > 20) {
+            if (server.getQueueSize() < 20) {
                 return tempZone;
             }
 
